@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ACTA ERP</title>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Set API base for the client at page load -->
+    <script type="module">
+      // Use Vite env if provided, otherwise default to localhost:4000
+      window.__API_BASE__ = import.meta.env?.VITE_API_BASE ?? "http://localhost:4000";
+      // You can override at runtime from DevTools with:
+      // window.__API_BASE__ = 'http://localhost:4001'
+    </script>
+
+    <!-- Removed: <script src="http://localhost:8097"></script> -->
+
+    <!-- Your app entry -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+{
+  "name": "server",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "seed:coa": "node ./seed/seed_coa.js",
+    "seed:coa:wipe": "node ./seed/seed_coa.js --wipe",
+    "seed:gl": "node ./seed/seed_gl.js",
+    "seed:gl:wipe": "node ./seed/seed_gl.js --wipe",
+    "gl:drop-uniq": "node scripts/gl_unique_index.js",
+    "gl:test": "node scripts/test_gl.js",
+    "seed:persons": "node/scripts/seed_persons.js",
+    "kill4000": "fuser -k 4000/tcp || true"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "form-data": "^4.0.4",
+    "imapflow": "^1.0.200",
+    "mailparser": "^3.7.5",
+    "mongoose": "^8.4.1",
+    "multer": "^2.0.2",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.17.2",
+    "socket.io": "^4.7.5",
+    "tesseract.js": "^6.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
