@@ -40,7 +40,13 @@ const HOST = process.env.HOST || "0.0.0.0";
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://127.0.0.1:27017/nexus_erp";
 
+// ✅ prod/dev switch
+const NODE_ENV = process.env.NODE_ENV || "development";
+const IS_PROD = NODE_ENV === "production";
+
 // ✅ IMPORTANT: allow comma-separated origins in env
+// Example PROD: https://jeanalbertsen.com,https://www.jeanalbertsen.com
+// Example DEV:  http://localhost:5173,http://127.0.0.1:5173
 const CLIENT_ORIGIN_RAW = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 const CLIENT_ORIGINS = CLIENT_ORIGIN_RAW
   .split(",")
@@ -69,18 +75,34 @@ const ENV_EXTRA = (process.env.CORS_ORIGINS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-// ✅ Final allowed origins list (deduped)
-const ALLOWED_ORIGINS = Array.from(
-  new Set([
-    ...CLIENT_ORIGINS,
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    // keep your hotspot IP if you want it explicitly (optional)
-    "http://172.20.10.3:5173",
-    ...detectLanOrigins(),
-    ...ENV_EXTRA,
-  ])
-);
+/**
+ * ✅ Allowed origins:
+ * - In PROD: only explicit domains you set in CLIENT_ORIGIN/CORS_ORIGINS (+ jeanalbertsen regex)
+ * - In DEV: include localhost + LAN detection
+ */
+const BASE_ALLOWED = new Set([
+  ...CLIENT_ORIGINS,
+  ...ENV_EXTRA,
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
+
+if (!IS_PROD) {
+  // optional dev convenience (phone/LAN)
+  BASE_ALLOWED.add("http://172.20.10.3:5173");
+  for (const o of detectLanOrigins()) BASE_ALLOWED.add(o);
+}
+
+const ALLOWED_ORIGINS = Array.from(BASE_ALLOWED);
+
+// ✅ Allow your domain family automatically (so you don’t forget to add www/non-www)
+const ALLOW_DOMAIN_REGEXES = [/^https:\/\/(www\.)?jeanalbertsen\.com$/i];
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true; // curl/postman/native/no origin
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  return ALLOW_DOMAIN_REGEXES.some((rx) => rx.test(origin));
+}
 
 mongoose.set("strictQuery", true);
 const app = express();
@@ -94,12 +116,11 @@ console.log("[BOOT] Uploads dir ready:", uploadDir);
 /* ---------- CORS (shared options for normal + preflight) ---------- */
 const corsOptions = {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // curl/postman/same-origin
-    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    if (isAllowedOrigin(origin)) return cb(null, true);
 
-    // ✅ log what was blocked so you can see phone origin immediately
     console.log("[CORS BLOCKED ORIGIN]", origin);
     console.log("[CORS ALLOWED ORIGINS]", ALLOWED_ORIGINS);
+    console.log("[CORS ALLOWED REGEXES]", ALLOW_DOMAIN_REGEXES.map(String));
     return cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
@@ -112,7 +133,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // ✅ IMPORTANT: preflight must use SAME options, not cors() default
 app.options("*", cors(corsOptions));
-
 /* ---------- Parsers / misc ---------- */
 app.use(express.json({ limit: "100mb" }));
 app.set("trust proxy", 1);
@@ -123,7 +143,9 @@ app.get("/readyz", (_req, res) => {
   const states = ["disconnected", "connected", "connecting", "disconnecting"];
   res.json({
     ok: mongoose.connection.readyState === 1,
-    mongo: states[mongoose.connection.readyState] || mongoose.connection.readyState,
+    mongo:
+      states[mongoose.connection.readyState] ||
+      mongoose.connection.readyState,
   });
 });
 
@@ -173,7 +195,9 @@ app.use("/api/bilags", bilagsRouter);
 app.use(seedRouter);
 
 /* 404 for unknown API routes */
-app.use("/api", (_req, res) => res.status(404).json({ ok: false, error: "not_found" }));
+app.use("/api", (_req, res) =>
+  res.status(404).json({ ok: false, error: "not_found" })
+);
 
 /* Central error handler */
 app.use((err, _req, res, _next) => {
@@ -186,6 +210,7 @@ app.use((err, _req, res, _next) => {
 /* ---------- Boot ---------- */
 async function start() {
   try {
+    console.log(`[BOOT] NODE_ENV=${NODE_ENV}`);
     console.log(`[BOOT] Connecting Mongo @ ${MONGO_URI}`);
     await mongoose.connect(MONGO_URI, { autoIndex: true });
     console.log("[BOOT] Mongo connected");
@@ -239,7 +264,8 @@ async function start() {
     app.listen(PORT, HOST, () => {
       console.log(`[BOOT] API listening on http://${HOST}:${PORT}`);
       console.log("  • /healthz  /readyz");
-      console.log(`[BOOT] CORS origins: ${ALLOWED_ORIGINS.join(", ")}`);
+      console.log(`[BOOT] CORS origins (explicit): ${ALLOWED_ORIGINS.join(", ")}`);
+      console.log(`[BOOT] CORS regex allow: ${ALLOW_DOMAIN_REGEXES.map(String).join(", ")}`);
     });
   } catch (err) {
     if (err.code === "EADDRINUSE") {

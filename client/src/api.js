@@ -1,13 +1,36 @@
 /* =========================================
    API base (with extra env fallbacks) — now mutable at runtime
-   ✅ FIX: on phones, default to current host instead of localhost
+   ✅ FIX:
+   - Production MUST use VITE_API_BASE (or runtime window.__API_BASE__)
+   - Only auto-fallback to :4000 when running on localhost / LAN IP
    ========================================= */
 
-// If running in browser, default API to same host as the current page, port 4000.
-// Example: page http://172.20.10.3:5173  -> API http://172.20.10.3:4000
+function isLikelyLocalHost(hostname = "") {
+  const h = String(hostname).trim().toLowerCase();
+  if (!h) return false;
+
+  if (h === "localhost" || h === "127.0.0.1") return true;
+
+  // Check for IPv4
+  const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(h);
+  if (!isIPv4) return false;
+
+  // Private ranges: 10/8, 192.168/16, 172.16/12
+  if (/^10\./.test(h)) return true;
+  if (/^192\.168\./.test(h)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
+
+  return false;
+}
+
+// Dev default: if you're browsing from localhost/LAN → assume API on same host:4000
+// Prod default: DO NOT guess :4000 — instead fall back to same-origin (only works if you proxy API)
+// In production you should set VITE_API_BASE to your Render API URL.
 const DEFAULT_BASE =
   typeof window !== "undefined"
-    ? `${window.location.protocol}//${window.location.hostname}:4000`
+    ? isLikelyLocalHost(window.location.hostname)
+      ? `${window.location.protocol}//${window.location.hostname}:4000`
+      : `${window.location.origin}` // safe fallback if you later reverse-proxy API under same domain
     : "http://localhost:4000";
 
 const RAW_BASE =

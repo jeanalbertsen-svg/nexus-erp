@@ -1,73 +1,82 @@
-/* ===== Global size & density control (ERP-style) ===== */
-html {
-  font-size: 13px;           /* ↓ smaller base size (default is 16px) */
+/* ===== Best-practice global baseline (ERP compact + mobile-safe) ===== */
+
+:root {
+  color-scheme: light dark; /* allows native form controls to match theme in many browsers */
 }
 
-* {
+html {
+  font-size: 13px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  width: 100%;
+  overflow-x: hidden; /* avoid side-scroll caused by wide components */
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.3;          /* ↓ tighter vertical spacing */
-  color: #1f2933;
+  line-height: 1.3;
 }
 
-/* Headings – compact */
-h1 {
-  font-size: 1.4rem;
-  margin: 0.4em 0;
+/* Make media never overflow containers */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
 }
 
-h2 {
-  font-size: 1.2rem;
-  margin: 0.4em 0;
-}
-
-h3 {
-  font-size: 1.05rem;
-  margin: 0.3em 0;
-}
-
-/* Text */
-p {
-  margin: 0.4em 0;
-}
-
-/* Forms & buttons */
-button,
-input,
-select,
-textarea {
-  font-size: 0.9rem;
-  padding: 4px 8px;
-}
-
-/* Tables – very important for ERP UIs */
+/* Tables: do NOT overflow the page on phones */
 table {
-  font-size: 0.85rem;
+  width: 100%;
   border-collapse: collapse;
+  font-size: 0.85rem;
 }
-
 th,
 td {
   padding: 4px 6px;
   text-align: left;
+  white-space: nowrap;
 }
 
-/* Lists */
-ul,
-ol {
-  margin: 0.4em 0;
-  padding-left: 1.2em;
+/* Wrap any table container you control with className="table-scroll" */
+.table-scroll,
+.MuiTableContainer-root {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Optional: constrain overall width */
+/* Root should always be 100% on mobile */
 #root {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
-    zoom: 0.85;
 }
 
+/* Desktop max width for "LinkedIn-like" centered layout */
+@media (min-width: 1024px) {
+  #root {
+    max-width: 1200px;
+  }
+}
+
+/* Mobile: slightly smaller base, prevent MUI layout overflow */
+@media (max-width: 600px) {
+  html {
+    font-size: 12.5px;
+  }
+
+  .MuiGrid-root,
+  .MuiBox-root,
+  .MuiPaper-root {
+    max-width: 100%;
+  }
+}
