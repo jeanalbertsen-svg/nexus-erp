@@ -208,7 +208,7 @@ function buildTheme(mode = "light") {
 
 
 // Desktop drawer fixed width; mobile uses responsive width in Shell
-const drawerWidth = 220;
+const drawerWidth = 240;
 
 /* ---------- UTIL ---------- */
 const fmtKr = (n) =>
@@ -721,7 +721,7 @@ function Shell({ onLogout }) {
       }}
     >
       {/* align drawer content below the fixed AppBar */}
-      <Toolbar />
+{/*       <Toolbar />
       <Box sx={{ px: 2, py: 2 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <img
@@ -733,7 +733,7 @@ function Shell({ onLogout }) {
         <Typography variant="caption" color="text.secondary">
           Venture Finance Suite
         </Typography>
-      </Box>
+      </Box> */}
 
       <Divider />
 
