@@ -87,23 +87,24 @@ export default function Login({ onLogin }) {
                 mb: 1.5,
               }}
             >
+              {/* ✅ Logo wrapper: removed black background so PNG transparency shows */}
               <Box
                 sx={{
                   width: 42,
                   height: 42,
-                  borderRadius: 2,
-                  bgcolor: "rgba(15,23,42,0.95)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 18px 35px rgba(15,23,42,0.7)",
-                  bgcolor: "#020309",        // ✅ fallback so it can never be white
-                }}   
+                }}
               >
                 <img
                   src="/ACTA_logo.png"
                   alt="Acta Logo"
-                  style={{ height: 24 }}
+                  style={{
+                    height: 28,
+                    width: "auto",
+                    display: "block",
+                  }}
                 />
               </Box>
             </Box>
