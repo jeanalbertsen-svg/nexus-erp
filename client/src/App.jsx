@@ -1,6 +1,7 @@
 // client/src/App.jsx — Top-level + Second-level ERP nav (Inventory ADDED)
 // Blue nav links/icons; selected nav uses transparent deep dark blue
 // AppBar (header) is solid deep dark blue
+// ✅ Responsive upgrades: mobile-friendly header, drawer sizing, safe-area padding, scrollable drawer
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-dom";
@@ -33,6 +34,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Tooltip,
 } from "@mui/material";
 import { createTheme, ThemeProvider, useTheme, styled } from "@mui/material/styles";
 
@@ -67,6 +69,7 @@ import DataObjectIcon from "@mui/icons-material/DataObject";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import InboxIcon from "@mui/icons-material/Inbox"; // ✅ ensure imported
+import InsightsIcon from "@mui/icons-material/Insights";
 
 /* === Pages === */
 import GLDashboard from "./pages/GLDashboard.jsx";
@@ -147,6 +150,8 @@ const AUTH_LS_KEY = "erp.auth.user"; // 🌟 simple auth storage
 function buildTheme(mode = "light") {
   const isDark = mode === "dark";
   return createTheme({
+    spacing: 6, // ✅ default is 8 → this makes paddings/margins smaller everywhere
+
     palette: {
       mode,
       primary: { main: "#0E4C92" },
@@ -158,56 +163,52 @@ function buildTheme(mode = "light") {
       },
       divider: isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)",
     },
-    shape: { borderRadius: 18 },
+
+    shape: { borderRadius: 10 },
+
     typography: {
-      fontSize: 15, // bigger base font
-      h5: {
-        fontSize: "1.6rem",
-        fontWeight: 600,
-      },
-      h6: {
-        fontSize: "1.3rem",
-        fontWeight: 600,
-      },
-      subtitle1: {
-        fontSize: "1.05rem",
-      },
-      body1: {
-        fontSize: "1rem",
-      },
-      body2: {
-        fontSize: "0.98rem",
-      },
-      caption: {
-        fontSize: "0.86rem",
-      },
+      htmlFontSize: 13, // ✅ important for rem sizing inside MUI
+      fontSize: 12,     // ✅ base typography scale inside MUI
+      h5: { fontSize: "1.15rem", fontWeight: 600 },
+      h6: { fontSize: "1.0rem", fontWeight: 600 },
+      subtitle1: { fontSize: "0.9rem" },
+      body1: { fontSize: "0.85rem" },
+      body2: { fontSize: "0.8rem" },
+      caption: { fontSize: "0.72rem" },
     },
-    shadows: [
-      "none",
-      "0 1px 2px rgba(0,0,0,.04)",
-      "0 1px 4px rgba(0,0,0,.06)",
-      "0 6px 18px rgba(14,76,146,.08)",
-      ...Array(21).fill("0 8px 30px rgba(14,76,146,.06)"),
-    ],
+
     components: {
       MuiCssBaseline: {
         styleOverrides: {
-          body: {
-            transition: "background-color .25s ease, color .25s ease",
-          },
+          body: { transition: "background-color .25s ease, color .25s ease" },
         },
       },
-      MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },
-      MuiDrawer: { styleOverrides: { paper: { backgroundImage: "none" } } },
-      MuiAppBar: { styleOverrides: { root: { backgroundImage: "none" } } },
-      MuiListItemIcon: { styleOverrides: { root: { color: "#114b8dff" } } },
-      MuiButton: { styleOverrides: { root: { borderRadius: 999 } } },
-      MuiChip: { styleOverrides: { root: { borderRadius: 10 } } },
+
+      // ✅ compact controls
+      MuiTextField: { defaultProps: { size: "small" } },
+      MuiButton: {
+        defaultProps: { size: "small" },
+        styleOverrides: {
+          root: { minHeight: 30, padding: "3px 10px", fontSize: "0.78rem", borderRadius: 8, textTransform: "none" },
+        },
+      },
+      MuiChip: { styleOverrides: { root: { height: 22, fontSize: "0.72rem" } } },
+      MuiIconButton: { defaultProps: { size: "small" } },
+      MuiListItemButton: { styleOverrides: { root: { paddingTop: 6, paddingBottom: 6 } } },
+      MuiListItemIcon: { styleOverrides: { root: { minWidth: 32, color: "#114b8dff" } } },
+
+      MuiToolbar: {
+        styleOverrides: {
+          root: { minHeight: 48 }, // ✅ smaller header height
+        },
+      },
     },
   });
 }
 
-const drawerWidth = 296;
+
+// Desktop drawer fixed width; mobile uses responsive width in Shell
+const drawerWidth = 220;
 
 /* ---------- UTIL ---------- */
 const fmtKr = (n) =>
@@ -233,35 +234,18 @@ function LineChartBasic({ data = [], xKey, yKeys = [], colors = [] }) {
   const cols = colors.length ? colors : ["#2DBE89", "#FF7043", "#0E4C92"];
   const maxY = Math.max(
     1,
-    ...data.flatMap((d) =>
-      keys.map((k) => Math.max(0, Number(d[k]) || 0))
-    )
+    ...data.flatMap((d) => keys.map((k) => Math.max(0, Number(d[k]) || 0)))
   );
   const x = (i) =>
     pad + (data.length > 1 ? (i * (w - 2 * pad)) / (data.length - 1) : 0);
   const y = (v) => h - pad - (v / maxY) * (h - 2 * pad);
-  const grid = Array.from({ length: 5 }, (_, i) =>
-    y(((i + 1) * maxY) / 5)
-  );
+  const grid = Array.from({ length: 5 }, (_, i) => y(((i + 1) * maxY) / 5));
+
   return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      width="100%"
-      height="100%"
-      role="img"
-      aria-label="Line chart"
-    >
+    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="100%" role="img" aria-label="Line chart">
       <rect x="0" y="0" width={w} height={h} fill="transparent" />
       {grid.map((gy, i) => (
-        <line
-          key={i}
-          x1={pad}
-          x2={w - pad}
-          y1={gy}
-          y2={gy}
-          stroke="#e0e0e0"
-          strokeDasharray="3 3"
-        />
+        <line key={i} x1={pad} x2={w - pad} y1={gy} y2={gy} stroke="#e0e0e0" strokeDasharray="3 3" />
       ))}
       <line x1={pad} x2={pad} y1={pad} y2={h - pad} stroke="#999" />
       <line x1={pad} x2={w - pad} y1={h - pad} y2={h - pad} stroke="#999" />
@@ -269,9 +253,7 @@ function LineChartBasic({ data = [], xKey, yKeys = [], colors = [] }) {
         const d = data
           .map((row, i) => {
             const cmd = i === 0 ? "M" : "L";
-            return `${cmd} ${x(i)} ${y(
-              Math.max(0, Number(row[k]) || 0)
-            )}`;
+            return `${cmd} ${x(i)} ${y(Math.max(0, Number(row[k]) || 0))}`;
           })
           .join(" ");
         return (
@@ -285,13 +267,7 @@ function LineChartBasic({ data = [], xKey, yKeys = [], colors = [] }) {
         );
       })}
       {data.map((row, i) => (
-        <text
-          key={i}
-          x={x(i)}
-          y={h - pad + 14}
-          fontSize="10"
-          textAnchor="middle"
-        >
+        <text key={i} x={x(i)} y={h - pad + 14} fontSize="10" textAnchor="middle">
           {String(row[xKey] || "")}
         </text>
       ))}
@@ -303,60 +279,31 @@ function BarChartBasic({ data = [], xKey, bars = [], colors = [] }) {
   const w = 600,
     h = 240,
     pad = 36;
-  const keys = bars.length
-    ? bars
-    : Object.keys(data[0] || {}).filter((k) => k !== xKey);
+  const keys = bars.length ? bars : Object.keys(data[0] || {}).filter((k) => k !== xKey);
   const cols = colors.length ? colors : ["#0E4C92", "#EC407A", "#2DBE89"];
-  const maxY = Math.max(
-    1,
-    ...data.flatMap((d) => keys.map((k) => Number(d[k]) || 0))
-  );
+  const maxY = Math.max(1, ...data.flatMap((d) => keys.map((k) => Number(d[k]) || 0)));
   const slot = (w - 2 * pad) / (data.length || 1);
-  const barW = Math.max(
-    6,
-    Math.min(28, slot / Math.max(1, keys.length + 0.5))
-  );
+  const barW = Math.max(6, Math.min(28, slot / Math.max(1, keys.length + 0.5)));
+
   return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      width="100%"
-      height="100%"
-      role="img"
-      aria-label="Bar chart"
-    >
+    <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="100%" role="img" aria-label="Bar chart">
       <rect x="0" y="0" width={w} height={h} fill="transparent" />
       <line x1={pad} x2={pad} y1={pad} y2={h - pad} stroke="#999" />
       <line x1={pad} x2={w - pad} y1={h - pad} y2={h - pad} stroke="#999" />
       {data.map((row, i) => {
         const xCenter = pad + i * slot + slot / 2;
-        const totalBarWidth =
-          keys.length * barW + (keys.length - 1) * 4;
+        const totalBarWidth = keys.length * barW + (keys.length - 1) * 4;
         const x0 = xCenter - totalBarWidth / 2;
         return keys.map((k, j) => {
           const v = Math.max(0, Number(row[k]) || 0);
           const bh = (v * (h - 2 * pad)) / Math.max(1, maxY);
           const x = x0 + j * (barW + 4);
           const y = h - pad - bh;
-          return (
-            <rect
-              key={`${i}-${k}`}
-              x={x}
-              y={y}
-              width={barW}
-              height={bh}
-              rx="2"
-            />
-          );
+          return <rect key={`${i}-${k}`} x={x} y={y} width={barW} height={bh} rx="2" fill={cols[j % cols.length]} />;
         });
       })}
       {data.map((row, i) => (
-        <text
-          key={i}
-          x={pad + i * slot + slot / 2}
-          y={h - pad + 14}
-          fontSize="10"
-          textAnchor="middle"
-        >
+        <text key={i} x={pad + i * slot + slot / 2} y={h - pad + 14} fontSize="10" textAnchor="middle">
           {String(row[xKey] || "")}
         </text>
       ))}
@@ -428,31 +375,15 @@ function sectionFromPath(pathname) {
   if (TOP.some((t) => t.key === sec)) return sec;
 
   if (["gl", "journal", "trial", "coa", "finance", "reports", "inventory"].includes(sec)) {
-    return sec === "reports"
-      ? "reports"
-      : sec === "inventory"
-      ? "inventory"
-      : "finance";
+    return sec === "reports" ? "reports" : sec === "inventory" ? "inventory" : "finance";
   }
 
   // ✅ ensure "admin" second-level pages keep "admin" open
-  if (
-    [
-      "company",
-      "users",
-      "workflows",
-      "templates",
-      "integrations",
-      "master-data",
-      "inbox",
-      "projects",
-    ].includes(sec)
-  ) {
+  if (["company", "users", "workflows", "templates", "integrations", "master-data", "inbox", "projects"].includes(sec)) {
     return "admin";
   }
   return "overview";
 }
-
 /* ---------- GL→Inventory auto-sync helpers ---------- */
 const INV_TAG_JSON = /INV\s*\{([^}]*)\}/i;
 const INV_TAG_KV = /INV\s*:\s*([^\r\n]+)/i;
@@ -533,9 +464,7 @@ function buildBusinessHealthNews(health) {
     { key: "dataQualityScore", label: "Data quality" },
   ];
 
-  const sorted = [...kpis].sort(
-    (a, b) => (health[a.key] || 0) - (health[b.key] || 0)
-  );
+  const sorted = [...kpis].sort((a, b) => (health[a.key] || 0) - (health[b.key] || 0));
   const worst = sorted[0];
   const second = sorted[1];
   const best = sorted[sorted.length - 1];
@@ -557,7 +486,6 @@ function buildBusinessHealthNews(health) {
     `Protect and build on ${best.label.toLowerCase()}. Use this strength as a platform when communicating with investors, banks and key stakeholders.`,
   ];
 
-  // KPI ranking so we can generate module shortcuts
   const ranking = sorted.map((kpi) => ({
     key: kpi.key,
     label: kpi.label,
@@ -569,41 +497,27 @@ function buildBusinessHealthNews(health) {
 
 /* Map each KPI to the most relevant ERP module route */
 const KPI_MODULE_ROUTES = {
-  profitabilityScore: {
-    label: "Open Reports (P&L & KPIs)",
-    path: "/reports",
-  },
-  liquidityScore: {
-    label: "Open Balance Sheet (Liquidity)",
-    path: "/reports/balance-sheet",
-  },
-  collectionsScore: {
-    label: "Open Sales Invoices (A/R)",
-    path: "/sales/invoices",
-  },
-  payablesScore: {
-    label: "Open Supplier Invoices (A/P)",
-    path: "/purchasing/supplier-invoices",
-  },
-  dataQualityScore: {
-    label: "Open Journal & GL",
-    path: "/finance/journal",
-  },
+  profitabilityScore: { label: "Open Reports (P&L & KPIs)", path: "/reports" },
+  liquidityScore: { label: "Open Balance Sheet (Liquidity)", path: "/reports/balance-sheet" },
+  collectionsScore: { label: "Open Sales Invoices (A/R)", path: "/sales/invoices" },
+  payablesScore: { label: "Open Supplier Invoices (A/P)", path: "/purchasing/supplier-invoices" },
+  dataQualityScore: { label: "Open Journal & GL", path: "/finance/journal" },
 };
+
 /* ---------- MAIN SHELL ---------- */
 function Shell({ onLogout }) {
   const navigate = useNavigate();
   const location = useLocation();
   const themeMUI = useTheme();
+
   const isDesktop = useMediaQuery(themeMUI.breakpoints.up("md"));
+  const isPhone = useMediaQuery(themeMUI.breakpoints.down("sm"));
 
   /* Theme */
   const prefersDark = useMediaQuery("(prefers-color-scheme: dark)");
   const [mode, setMode] = useState(() => {
     try {
-      return (
-        localStorage.getItem(MODE_LS_KEY) || (prefersDark ? "dark" : "light")
-      );
+      return localStorage.getItem(MODE_LS_KEY) || (prefersDark ? "dark" : "light");
     } catch {
       return prefersDark ? "dark" : "light";
     }
@@ -615,13 +529,12 @@ function Shell({ onLogout }) {
       // ignore storage errors
     }
   }, [mode]);
+
   const appTheme = useMemo(() => buildTheme(mode), [mode]);
 
   /* State */
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(
-    () => new Date().toISOString().slice(0, 7) // YYYY-MM
-  );
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7)); // YYYY-MM
 
   const [accounts, setAccounts] = useState([]);
   const [glRows, setGLRows] = useState([]);
@@ -680,10 +593,7 @@ function Shell({ onLogout }) {
     return out;
   };
 
-  const glAll = useMemo(
-    () => mergeDedupRows(glRows, localGL),
-    [glRows, localGL]
-  );
+  const glAll = useMemo(() => mergeDedupRows(glRows, localGL), [glRows, localGL]);
 
   /* API calls */
   const refetchAccounts = async () => {
@@ -758,16 +668,9 @@ function Shell({ onLogout }) {
   }, []);
   useEffect(() => {
     if (
-      [
-        "/",
-        "/finance/finance-docs",
-        "/finance",
-        "/reports",
-        "/finance/gl",
-        "/finance/journal",
-        "/inventory",
-        "/admin/inbox",
-      ].some((p) => location.pathname.startsWith(p))
+      ["/", "/finance/finance-docs", "/finance", "/reports", "/finance/gl", "/finance/journal", "/inventory", "/admin/inbox"].some((p) =>
+        location.pathname.startsWith(p)
+      )
     ) {
       refetchGL();
       refetchJournals();
@@ -793,6 +696,9 @@ function Shell({ onLogout }) {
   }, [activeSection]);
 
   const navItemSX = {
+    py: 0.5,
+    "& .MuiListItemIcon-root": { minWidth: 34 },
+    "& .MuiListItemText-primary": { fontSize: "0.9rem" },
     "&.Mui-selected": {
       bgcolor: NAV_HILITE,
       color: "#fff",
@@ -801,92 +707,122 @@ function Shell({ onLogout }) {
     },
   };
 
+  // ✅ Mobile-friendly drawer width
+  const mobileDrawerWidth = isPhone ? "86vw" : "78vw";
+  const mobileDrawerMaxWidth = 360;
   const DrawerContent = (
-    <Box sx={{ display: "flex", flexDirection: "column", height: 1 }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: 1,
+        // ✅ scrollable drawer content on small screens
+        overflow: "hidden",
+      }}
+    >
+      {/* align drawer content below the fixed AppBar */}
+      <Toolbar />
       <Box sx={{ px: 2, py: 2 }}>
-        <img
-          src="/ACTA_logo.png"
-          alt="Acta Logo"
-          style={{ height: 32, marginRight: 8 }}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <img
+            src="/ACTA_logo.png"
+            alt="Acta Logo"
+            style={{ height: 26, maxWidth: "100%", objectFit: "contain" }}
+          />
+        </Box>
         <Typography variant="caption" color="text.secondary">
           Venture Finance Suite
         </Typography>
       </Box>
+
       <Divider />
-      <List sx={{ py: 0 }}>
-        {TOP.map((t) => {
-          const isActive = activeSection === t.key;
-          return (
-            <Box key={t.key}>
-              <ListItemButton
-                sx={navItemSX}
-                selected={isActive}
-                onClick={() => {
-                  const target = t.key === "overview" ? "/" : `/${t.key}`;
-                  navigate(target);
-                  setOpenGroups((g) => ({ [t.key]: !g[t.key] })); // 👈 only this key open/closed
-                  setMobileOpen(false);
-                }}
-              >
-                <ListItemIcon>{t.icon}</ListItemIcon>
-                <ListItemText primary={t.label} />
-                {openGroups[t.key] ? (
-                  <ExpandLess sx={{ color: "primary.main" }} />
-                ) : (
-                  <ExpandMore sx={{ color: "primary.main" }} />
-                )}
-              </ListItemButton>
-              <Collapse in={!!openGroups[t.key]} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {(SECOND[t.key] || []).map((s) => {
-                    const base = t.key === "overview" ? "/" : `/${t.key}`;
-                    const path = s.key ? `${base}/${s.key}` : base;
-                    const selected =
-                      location.pathname === path ||
-                      (path === "/" && location.pathname === "/");
-                    return (
-                      <ListItemButton
-                        key={`${t.key}-${s.key}`}
-                        sx={{ pl: 6, ...navItemSX }}
-                        selected={selected}
-                        onClick={() => {
-                          navigate(path);
-                          setMobileOpen(false);
-                        }}
-                      >
-                        <ListItemIcon sx={{ minWidth: 32 }}>
-                          {s.icon}
-                        </ListItemIcon>
-                        <ListItemText primary={s.label} />
-                      </ListItemButton>
-                    );
-                  })}
-                </List>
-              </Collapse>
-            </Box>
-          );
-        })}
-      </List>
-      <Box sx={{ flexGrow: 1 }} />
-      <Divider />
-      <List subheader={<ListSubheader disableSticky>Quick</ListSubheader>}>
-        <ListItemButton
-          sx={navItemSX}
-          onClick={() => navigate("/finance/journal")}
-        >
-          <ListItemIcon>
-            <BookIcon />
-          </ListItemIcon>
-          <ListItemText primary="New Journal Entry" />
-        </ListItemButton>
-      </List>
+
+      <Box sx={{ flex: 1, overflowY: "auto" }}>
+        <List sx={{ py: 0 }}>
+          {TOP.map((t) => {
+            const isActive = activeSection === t.key;
+            return (
+              <Box key={t.key}>
+                <ListItemButton
+                  sx={navItemSX}
+                  selected={isActive}
+                  onClick={() => {
+                    const target = t.key === "overview" ? "/" : `/${t.key}`;
+
+                    // ✅ Mobile-friendly: if already in section, just toggle; otherwise navigate and open.
+                    if (isActive) {
+                      setOpenGroups((g) => ({ ...g, [t.key]: !g[t.key] }));
+                    } else {
+                      navigate(target);
+                      setOpenGroups((g) => ({ ...g, [t.key]: true }));
+                    }
+
+                    setMobileOpen(false);
+                  }}
+                >
+                  <ListItemIcon>{t.icon}</ListItemIcon>
+                  <ListItemText primary={t.label} />
+                  {openGroups[t.key] ? (
+                    <ExpandLess sx={{ color: "primary.main" }} />
+                  ) : (
+                    <ExpandMore sx={{ color: "primary.main" }} />
+                  )}
+                </ListItemButton>
+
+                <Collapse in={!!openGroups[t.key]} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {(SECOND[t.key] || []).map((s) => {
+                      const base = t.key === "overview" ? "/" : `/${t.key}`;
+                      const path = s.key ? `${base}/${s.key}` : base;
+                      const selected =
+                        location.pathname === path || (path === "/" && location.pathname === "/");
+                      return (
+                        <ListItemButton
+                          key={`${t.key}-${s.key}`}
+                          sx={{ pl: 6, ...navItemSX }}
+                          selected={selected}
+                          onClick={() => {
+                            navigate(path);
+                            setMobileOpen(false);
+                          }}
+                        >
+                          <ListItemIcon sx={{ minWidth: 32 }}>{s.icon}</ListItemIcon>
+                          <ListItemText primary={s.label} />
+                        </ListItemButton>
+                      );
+                    })}
+                  </List>
+                </Collapse>
+              </Box>
+            );
+          })}
+        </List>
+
+        <Box sx={{ flexGrow: 1 }} />
+        <Divider />
+
+        <List subheader={<ListSubheader disableSticky>Quick</ListSubheader>}>
+          <ListItemButton
+            sx={navItemSX}
+            onClick={() => {
+              navigate("/finance/journal");
+              setMobileOpen(false);
+            }}
+          >
+            <ListItemIcon>
+              <BookIcon />
+            </ListItemIcon>
+            <ListItemText primary="New Journal Entry" />
+          </ListItemButton>
+        </List>
+
+        <Box sx={{ pb: 2 }} />
+      </Box>
     </Box>
   );
 
   /* ---------- APP-WIDE GL → INVENTORY SYNC ---------- */
-  const _yyyymmdd = (iso) =>
-    (iso || new Date().toISOString().slice(0, 10)).replaceAll("-", "");
+  const _yyyymmdd = (iso) => (iso || new Date().toISOString().slice(0, 10)).replaceAll("-", "");
   const _nextSeq = (prefix, dateISO) => {
     const k = `inv.seq.${prefix}.${_yyyymmdd(dateISO)}`;
     let n = 0;
@@ -904,9 +840,7 @@ function Shell({ onLogout }) {
     return n;
   };
   const _docNo = (prefix, dateISO) =>
-    `${prefix}-${_yyyymmdd(dateISO)}-${String(
-      _nextSeq(prefix, dateISO)
-    ).padStart(4, "0")}`;
+    `${prefix}-${_yyyymmdd(dateISO)}-${String(_nextSeq(prefix, dateISO)).padStart(4, "0")}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -914,9 +848,7 @@ function Shell({ onLogout }) {
       for (const r of glRows) {
         if (cancelled) return;
 
-        const directive =
-          parseInventoryDirective(r?.memo || "") ||
-          parseInventoryDirective(r?.reference || "");
+        const directive = parseInventoryDirective(r?.memo || "") || parseInventoryDirective(r?.reference || "");
         if (!directive) continue;
 
         const key = buildSyncKey(r);
@@ -925,8 +857,7 @@ function Shell({ onLogout }) {
 
         const dir = String(directive.dir || directive.direction || "").toLowerCase(); // "in" | "out"
         const itemSku = directive.sku || directive.item || directive.itemSku;
-        const qty =
-          Math.abs(Number(directive.qty ?? directive.quantity ?? 0)) || 0;
+        const qty = Math.abs(Number(directive.qty ?? directive.quantity ?? 0)) || 0;
         const unitCost = Number(directive.cost ?? directive.unitCost ?? 0) || 0;
         const wh = directive.wh || directive.warehouse || "";
 
@@ -940,15 +871,9 @@ function Shell({ onLogout }) {
         if (!itemSku || !qty || (!fromWhCode && !toWhCode)) continue;
 
         try {
-          const dateISO = String(
-            r.date || new Date().toISOString().slice(0, 10)
-          ).slice(0, 10);
+          const dateISO = String(r.date || new Date().toISOString().slice(0, 10)).slice(0, 10);
           const moveNo = _docNo("MOVE", dateISO);
-          const reference =
-            r.reference ||
-            r.jeNumber ||
-            r.journalNo ||
-            _docNo("REF", dateISO);
+          const reference = r.reference || r.jeNumber || r.journalNo || _docNo("REF", dateISO);
           const itemNo = _docNo("ITEM", dateISO);
 
           const now = new Date().toISOString();
@@ -964,11 +889,7 @@ function Shell({ onLogout }) {
             fromWhCode: fromWhCode || undefined,
             toWhCode: toWhCode || undefined,
             status: "approved",
-            memo:
-              directive.memo ||
-              (dir === "out"
-                ? "Auto from GL (sale)"
-                : "Auto from GL (purchase)"),
+            memo: directive.memo || (dir === "out" ? "Auto from GL (sale)" : "Auto from GL (purchase)"),
             participants: {
               preparedBy: { name: directive.preparedBy || "GL Sync", at: now },
               approvedBy: { name: directive.approvedBy || "GL Sync", at: now },
@@ -977,7 +898,6 @@ function Shell({ onLogout }) {
 
           const id = created?._id || created?.id;
           if (id) {
-            // NOTE: postStockMove now supports a body param in api.js
             await postStockMove(id, { postedBy: "GL Sync" });
             const s = getSyncedSet();
             s.add(key);
@@ -1001,10 +921,7 @@ function Shell({ onLogout }) {
       try {
         const list = await listPurchaseInvoices();
         const hit = (Array.isArray(list) ? list : []).find(
-          (x) =>
-            x?.invoiceNo === refNo ||
-            x?.number === refNo ||
-            x?.refNo === refNo
+          (x) => x?.invoiceNo === refNo || x?.number === refNo || x?.refNo === refNo
         );
         if (!hit) return null;
         if ((!hit.lines || !hit.lines.length) && getPurchaseInvoice) {
@@ -1020,10 +937,7 @@ function Shell({ onLogout }) {
   };
 
   /* Dashboard data — uses glAll (API ⨁ local) */
-  const glMonth = useMemo(
-    () => glAll.filter((r) => monthKey(r.date) === selectedMonth),
-    [glAll, selectedMonth]
-  );
+  const glMonth = useMemo(() => glAll.filter((r) => monthKey(r.date) === selectedMonth), [glAll, selectedMonth]);
 
   const totals = useMemo(() => {
     const debit = glMonth.reduce((s, r) => s + (r.debit || 0), 0);
@@ -1032,56 +946,34 @@ function Shell({ onLogout }) {
   }, [glMonth]);
 
   const cashBalance = useMemo(
-    () =>
-      glMonth
-        .filter((r) => isCashLike(r.account))
-        .reduce((s, r) => s + (r.debit || 0) - (r.credit || 0), 0),
+    () => glMonth.filter((r) => isCashLike(r.account)).reduce((s, r) => s + (r.debit || 0) - (r.credit || 0), 0),
     [glMonth]
   );
   const arBalance = useMemo(
-    () =>
-      glMonth
-        .filter((r) => isAR(r.account))
-        .reduce((s, r) => s + (r.debit || 0) - (r.credit || 0), 0),
+    () => glMonth.filter((r) => isAR(r.account)).reduce((s, r) => s + (r.debit || 0) - (r.credit || 0), 0),
     [glMonth]
   );
   const apBalance = useMemo(
-    () =>
-      glMonth
-        .filter((r) => isAP(r.account))
-        .reduce((s, r) => s + (r.credit || 0) - (r.debit || 0), 0),
+    () => glMonth.filter((r) => isAP(r.account)).reduce((s, r) => s + (r.credit || 0) - (r.debit || 0), 0),
     [glMonth]
   );
 
   const mtdRevenue = useMemo(
-    () =>
-      glMonth
-        .filter((r) => isRevenueAcc(r.account))
-        .reduce((s, r) => s + (r.credit || 0) - (r.debit || 0), 0),
+    () => glMonth.filter((r) => isRevenueAcc(r.account)).reduce((s, r) => s + (r.credit || 0) - (r.debit || 0), 0),
     [glMonth]
   );
   const mtdExpenses = useMemo(
-    () =>
-      glMonth
-        .filter((r) => isExpenseAcc(r.account))
-        .reduce((s, r) => s + (r.debit || 0) - (r.credit || 0), 0),
+    () => glMonth.filter((r) => isExpenseAcc(r.account)).reduce((s, r) => s + (r.debit || 0) - (r.credit || 0), 0),
     [glMonth]
   );
-  const mtdNet = useMemo(
-    () => mtdRevenue - mtdExpenses,
-    [mtdRevenue, mtdExpenses]
-  );
+  const mtdNet = useMemo(() => mtdRevenue - mtdExpenses, [mtdRevenue, mtdExpenses]);
 
   const pendingJEs = useMemo(
-    () =>
-      (journalEntries || []).filter(
-        (j) => (j.status || "draft") !== "posted"
-      ).length,
+    () => (journalEntries || []).filter((j) => (j.status || "draft") !== "posted").length,
     [journalEntries]
   );
 
-  /* ---------- AI Business Health scoring (KPI Bars) ----------
-     Re-computed in real time whenever GL / Journals / month change */
+  /* ---------- AI Business Health scoring (KPI Bars) ---------- */
   const businessHealth = useMemo(() => {
     const revenue = mtdRevenue;
     const net = mtdNet;
@@ -1128,12 +1020,7 @@ function Shell({ onLogout }) {
     dataQualityScore = clamp(dataQualityScore);
 
     const overallScore =
-      (profitabilityScore +
-        liquidityScore +
-        collectionsScore +
-        payablesScore +
-        dataQualityScore) /
-      5;
+      (profitabilityScore + liquidityScore + collectionsScore + payablesScore + dataQualityScore) / 5;
 
     return {
       overallScore,
@@ -1145,24 +1032,12 @@ function Shell({ onLogout }) {
     };
   }, [mtdRevenue, mtdNet, cashBalance, arBalance, apBalance, mtdExpenses, totals.balance, pendingJEs]);
 
-  const businessHealthNews = useMemo(
-    () => buildBusinessHealthNews(businessHealth),
-    [businessHealth]
-  );
-
+  const businessHealthNews = useMemo(() => buildBusinessHealthNews(businessHealth), [businessHealth]);
   const [bhDialogOpen, setBhDialogOpen] = useState(false);
 
   /* CSV export */
   const exportGL = (rows, filename = "general_ledger.csv") => {
-    const header = [
-      "Date",
-      "Account",
-      "Description",
-      "Debit (kr)",
-      "Credit (kr)",
-      "Reference",
-      "JE No.",
-    ];
+    const header = ["Date", "Account", "Description", "Debit (kr)", "Credit (kr)", "Reference", "JE No."];
     const lines = (rows ?? glAll).map((r) =>
       [
         String(r.date).slice(0, 10),
@@ -1189,7 +1064,14 @@ function Shell({ onLogout }) {
   return (
     <ThemeProvider theme={appTheme}>
       <CssBaseline />
-      <Box sx={{ display: "flex" }}>
+      <Box
+        sx={{
+          display: "flex",
+          minHeight: "100dvh",
+          // ✅ avoid sideways scroll on phones
+          overflowX: "hidden",
+        }}
+      >
         {/* Deep dark blue AppBar */}
         <AppBar
           position="fixed"
@@ -1199,52 +1081,107 @@ function Shell({ onLogout }) {
             color: "#fff",
           }}
         >
-          <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Toolbar
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 1,
+              // ✅ better wrapping on small screens
+              flexWrap: "nowrap",
+              minHeight: { xs: 52, md: 56 },
+              px: { xs: 1, md: 2 },
+              paddingTop: "env(safe-area-inset-top)",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
               <IconButton
                 color="inherit"
                 edge="start"
                 onClick={() => setMobileOpen(true)}
-                sx={{ mr: 1, display: { md: "none" } }}
+                sx={{ mr: 0.5, display: { md: "none" } }}
+                aria-label="Open navigation menu"
               >
                 <MenuIcon />
               </IconButton>
-              <img src="/ACTA_logo.png" alt="Acta Logo" style={{ height: 32 }} />
+
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+                <img
+                  src="/ACTA_logo.png"
+                  alt="Acta Logo"
+                  style={{ height: isPhone ? 22 : 24, flex: "0 0 auto" }}
+                />
+                {/* ✅ optional tiny title for clarity on mobile */}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: { xs: "none", sm: "block" },
+                    opacity: 0.9,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Venture Finance Suite
+                </Typography>
+              </Box>
             </Box>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Chip
-                label={`Debet ${fmtKr(totals.debit)}`}
-                size="small"
-                color="success"
-              />
-              <Chip
-                label={`Kredit ${fmtKr(totals.credit)}`}
-                size="small"
-                color="error"
-              />
-              <Chip label={`Saldo ${fmtKr(totals.balance)}`} size="small" />
-              <IconButton color="inherit">
-                <NotificationsIcon />
-              </IconButton>
-              <IconButton
-                color="inherit"
-                onClick={() =>
-                  setMode((m) => (m === "light" ? "dark" : "light"))
-                }
-                aria-label="Toggle light/dark mode"
-                title={
-                  mode === "light"
-                    ? "Switch to dark mode"
-                    : "Switch to light mode"
-                }
-              >
-                {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
-              </IconButton>
+
+            {/* Right side actions */}
+            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+              {/* ✅ Desktop KPI chips */}
+              <Stack direction="row" spacing={1} sx={{ display: { xs: "none", md: "flex" } }} alignItems="center">
+                <Chip label={`Debet ${fmtKr(totals.debit)}`} size="small" color="success" />
+                <Chip label={`Kredit ${fmtKr(totals.credit)}`} size="small" color="error" />
+                <Chip label={`Saldo ${fmtKr(totals.balance)}`} size="small" />
+              </Stack>
+
+              {/* ✅ Mobile: one compact KPI chip + insights shortcut */}
+              <Stack direction="row" spacing={0.5} sx={{ display: { xs: "flex", md: "none" } }} alignItems="center">
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    color: "#fff",
+                    borderColor: "rgba(255,255,255,0.35)",
+                    maxWidth: "42vw",
+                    "& .MuiChip-label": {
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    },
+                  }}
+                  label={`MTD: ${fmtKr(mtdNet)}`}
+                />
+                <Tooltip title="View priorities">
+                  <IconButton
+                    color="inherit"
+                    onClick={() => setBhDialogOpen(true)}
+                    aria-label="Open performance priorities"
+                  >
+                    <InsightsIcon />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+
+              <Tooltip title="Notifications">
+                <IconButton color="inherit" aria-label="Notifications">
+                  <NotificationsIcon />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title={mode === "light" ? "Switch to dark mode" : "Switch to light mode"}>
+                <IconButton
+                  color="inherit"
+                  onClick={() => setMode((m) => (m === "light" ? "dark" : "light"))}
+                  aria-label="Toggle light/dark mode"
+                >
+                  {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
+                </IconButton>
+              </Tooltip>
+
               {onLogout && (
                 <Button
                   color="inherit"
                   size="small"
-                  sx={{ textTransform: "none", ml: 1 }}
+                  sx={{ textTransform: "none", ml: 0.5, display: { xs: "none", sm: "inline-flex" } }}
                   onClick={onLogout}
                 >
                   Logout
@@ -1253,6 +1190,7 @@ function Shell({ onLogout }) {
             </Stack>
           </Toolbar>
         </AppBar>
+
         {/* Drawer */}
         {isDesktop ? (
           <Drawer
@@ -1275,7 +1213,12 @@ function Shell({ onLogout }) {
             open={mobileOpen}
             onClose={() => setMobileOpen(false)}
             ModalProps={{ keepMounted: true }}
-            sx={{ "& .MuiDrawer-paper": { width: drawerWidth } }}
+            sx={{
+              "& .MuiDrawer-paper": {
+                width: mobileDrawerWidth,
+                maxWidth: mobileDrawerMaxWidth,
+              },
+            }}
           >
             {DrawerContent}
           </Drawer>
@@ -1285,36 +1228,30 @@ function Shell({ onLogout }) {
           component="main"
           sx={{
             flexGrow: 1,
-            p: { xs: 3, md: 4.5 }, // more padding so page feels bigger
+            // ✅ better mobile spacing + safe-area
+            p: { xs: 1, sm: 1, md: 2 },
+            pb: { xs: 2, md: 2.5 },
             width: { md: `calc(100% - ${drawerWidth}px)` },
+            paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)",
           }}
         >
           <Toolbar />
+
           {/* ---------- Overview & Routes ---------- */}
           {(() => {
-            function ModuleCard({
-              icon,
-              title,
-              subtitle,
-              action,
-              onClick,
-              kpi,
-            }) {
+            function ModuleCard({ icon, title, subtitle, action, onClick, kpi }) {
               return (
                 <Paper
                   elevation={0}
                   sx={(t) => ({
-                    p: 2,
+                    p: 1.25,
                     borderRadius: 3,
                     border: `1px solid ${t.palette.divider}`,
                     display: "flex",
                     flexDirection: "column",
                     gap: 1,
                     height: "100%",
-                    background:
-                      t.palette.mode === "dark"
-                        ? "rgba(255,255,255,.03)"
-                        : "#fff",
+                    background: t.palette.mode === "dark" ? "rgba(255,255,255,.03)" : "#fff",
                   })}
                 >
                   <Stack direction="row" spacing={1.25} alignItems="center">
@@ -1327,25 +1264,21 @@ function Shell({ onLogout }) {
                         placeItems: "center",
                         bgcolor: t.palette.primary.main,
                         color: "#fff",
+                        flex: "0 0 auto",
                       })}
                     >
                       {icon}
                     </Box>
-                    <Typography variant="subtitle1">{title}</Typography>
+                    <Typography variant="subtitle1" sx={{ minWidth: 0 }}>
+                      {title}
+                    </Typography>
                   </Stack>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ flexGrow: 1 }}
-                  >
+
+                  <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
                     {subtitle}
                   </Typography>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    justifyContent="space-between"
-                  >
+
+                  <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
                     {kpi ? <Chip size="small" label={kpi} /> : <span />}
                     <Button size="small" variant="outlined" onClick={onClick}>
                       {action}
@@ -1356,7 +1289,7 @@ function Shell({ onLogout }) {
             }
 
             const GlassCard = styled(Paper)(({ theme }) => ({
-              padding: theme.spacing(2.25),
+              padding: theme.spacing(1.25),
               borderRadius: theme.shape.borderRadius * 1.2,
               background:
                 theme.palette.mode === "dark"
@@ -1369,14 +1302,11 @@ function Shell({ onLogout }) {
             function Panel({ title, action, children, sx }) {
               return (
                 <GlassCard sx={{ ...sx }}>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ mb: 1 }}
-                  >
-                    <Typography variant="subtitle1">{title}</Typography>
-                    <Box>{action}</Box>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1, gap: 1 }}>
+                    <Typography variant="subtitle1" sx={{ minWidth: 0 }}>
+                      {title}
+                    </Typography>
+                    <Box sx={{ flex: "0 0 auto" }}>{action}</Box>
                   </Stack>
                   {children}
                 </GlassCard>
@@ -1386,15 +1316,12 @@ function Shell({ onLogout }) {
             function StatCard({ icon, label, value, delta, positive }) {
               return (
                 <GlassCard>
-                  <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Stack direction="row" spacing={1.25} alignItems="center">
                     <Avatar
                       sx={(t) => ({
                         width: 42,
                         height: 42,
-                        bgcolor:
-                          positive === false
-                            ? t.palette.error.light
-                            : t.palette.primary.main,
+                        bgcolor: positive === false ? t.palette.error.light : t.palette.primary.main,
                         color: "#fff",
                       })}
                       variant="rounded"
@@ -1405,11 +1332,8 @@ function Shell({ onLogout }) {
                       <Typography variant="caption" color="text.secondary">
                         {label}
                       </Typography>
-                      <Stack direction="row" spacing={1} alignItems="baseline">
-                        <Typography
-                          variant="h5"
-                          sx={{ fontWeight: 600, lineHeight: 1.1 }}
-                        >
+                      <Stack direction="row" spacing={1} alignItems="baseline" sx={{ flexWrap: "wrap" }}>
+                        <Typography variant="h5" sx={{ fontWeight: 600, lineHeight: 1.1 }}>
                           {value}
                         </Typography>
                         {typeof delta === "number" && (
@@ -1422,9 +1346,7 @@ function Shell({ onLogout }) {
                                 <ArrowUpwardIcon fontSize="inherit" />
                               )
                             }
-                            label={`${Math.abs(delta).toLocaleString(
-                              "da-DK"
-                            )} kr.`}
+                            label={`${Math.abs(delta).toLocaleString("da-DK")} kr.`}
                             color={positive === false ? "error" : "success"}
                             variant="outlined"
                           />
@@ -1438,29 +1360,22 @@ function Shell({ onLogout }) {
 
             // 🔵 Blue fill KPI bars
             function KPIBarRow({ label, score, hint }) {
-              const pct = Math.max(
-                0,
-                Math.min(
-                  100,
-                  Number.isFinite(score) ? score : 0
-                )
-              );
+              const pct = Math.max(0, Math.min(100, Number.isFinite(score) ? score : 0));
               return (
                 <Stack spacing={0.5}>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography variant="body2">{label}</Typography>
-                    <Typography variant="body2" color="text.secondary">
+                  <Stack direction="row" justifyContent="space-between" sx={{ gap: 1 }}>
+                    <Typography variant="body2" sx={{ minWidth: 0 }}>
+                      {label}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ flex: "0 0 auto" }}>
                       {pct.toFixed(0)}%
                     </Typography>
                   </Stack>
                   <Box
                     sx={(t) => ({
-                      height: 10,
+                      height: 8,
                       borderRadius: 999,
-                      bgcolor:
-                        t.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.08)"
-                          : "rgba(0,0,0,0.04)",
+                      bgcolor: t.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
                       overflow: "hidden",
                     })}
                   >
@@ -1495,24 +1410,30 @@ function Shell({ onLogout }) {
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
                     InputLabelProps={{ shrink: true }}
-                    sx={{ width: 220 }}
+                    sx={{ width: { xs: "100%", sm: 240 } }}
                   />
+
                   <Box sx={{ flexGrow: 1 }} />
-                  <Stack direction="row" spacing={1}>
+
+                  {/* ✅ Mobile-friendly action buttons: wrap and full-width on xs */}
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1}
+                    sx={{ width: { xs: "100%", md: "auto" } }}
+                  >
                     <Button
+                      fullWidth={isPhone}
                       variant="contained"
                       startIcon={<AddIcon />}
                       onClick={() => navigate("/finance/journal")}
                     >
                       New JE
                     </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={() => navigate("/finance/gl")}
-                    >
+                    <Button fullWidth={isPhone} variant="outlined" onClick={() => navigate("/finance/gl")}>
                       View GL
                     </Button>
                     <Button
+                      fullWidth={isPhone}
                       variant="outlined"
                       startIcon={<FileDownloadIcon />}
                       onClick={() => exportGL(glAll)}
@@ -1524,27 +1445,20 @@ function Shell({ onLogout }) {
 
                 {(Math.abs(totals.balance) > 1e-6 || pendingJEs > 0) && (
                   <Alert
-                    severity={
-                      Math.abs(totals.balance) > 1e-6 ? "warning" : "info"
-                    }
+                    severity={Math.abs(totals.balance) > 1e-6 ? "warning" : "info"}
                     sx={{ borderRadius: 3 }}
                   >
                     <AlertTitle>Attention</AlertTitle>
                     {Math.abs(totals.balance) > 1e-6 && (
                       <div>
-                        GL not balanced for {selectedMonth}: Δ{" "}
-                        {fmtKr(totals.balance)}.
+                        GL not balanced for {selectedMonth}: Δ {fmtKr(totals.balance)}.
                       </div>
                     )}
-                    {pendingJEs > 0 && (
-                      <div>
-                        {pendingJEs} journal(s) pending approval/posting.
-                      </div>
-                    )}
+                    {pendingJEs > 0 && <div>{pendingJEs} journal(s) pending approval/posting.</div>}
                   </Alert>
                 )}
 
-                <Paper sx={{ p: 2, borderRadius: 3 }}>
+                <Paper sx={{ p: { xs: 1.5, md: 2 }, borderRadius: 3 }}>
                   <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
                     ERP Modules Overview
                   </Typography>
@@ -1637,22 +1551,10 @@ function Shell({ onLogout }) {
 
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={3}>
-                    <StatCard
-                      icon={<AccountBalanceIcon />}
-                      label="Cash (MTD)"
-                      value={fmtKr(cashBalance)}
-                      delta={0}
-                      positive
-                    />
+                    <StatCard icon={<AccountBalanceIcon />} label="Cash (MTD)" value={fmtKr(cashBalance)} delta={0} positive />
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <StatCard
-                      icon={<ReceiptLongIcon />}
-                      label="A/R (MTD)"
-                      value={fmtKr(arBalance)}
-                      delta={0}
-                      positive
-                    />
+                    <StatCard icon={<ReceiptLongIcon />} label="A/R (MTD)" value={fmtKr(arBalance)} delta={0} positive />
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <StatCard
@@ -1673,7 +1575,6 @@ function Shell({ onLogout }) {
                     />
                   </Grid>
                 </Grid>
-
                 {/* Business Health KPI Bar graphs + AI guidance */}
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={7}>
@@ -1684,9 +1585,7 @@ function Shell({ onLogout }) {
                           <Chip
                             size="small"
                             color="primary"
-                            label={`Overall health: ${businessHealth.overallScore.toFixed(
-                              0
-                            )}%`}
+                            label={`Overall health: ${businessHealth.overallScore.toFixed(0)}%`}
                           />
                         )
                       }
@@ -1726,15 +1625,12 @@ function Shell({ onLogout }) {
                       )}
                     </Panel>
                   </Grid>
+
                   <Grid item xs={12} md={5}>
                     <Panel
                       title="Performance Insights & Priority Actions"
                       action={
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={() => setBhDialogOpen(true)}
-                        >
+                        <Button size="small" variant="contained" onClick={() => setBhDialogOpen(true)}>
                           View priorities
                         </Button>
                       }
@@ -1744,25 +1640,19 @@ function Shell({ onLogout }) {
                           <Typography variant="body2" color="text.secondary">
                             {businessHealthNews.summary}
                           </Typography>
-                          <Typography
-                            variant="body2"
-                            sx={{ fontWeight: 600, mt: 0.5 }}
-                          >
+
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5 }}>
                             Top focus areas
                           </Typography>
+
                           <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
-                            {businessHealthNews.priorities
-                              .slice(0, 3)
-                              .map((p, idx) => (
-                                <li key={idx}>
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    {p}
-                                  </Typography>
-                                </li>
-                              ))}
+                            {businessHealthNews.priorities.slice(0, 3).map((p, idx) => (
+                              <li key={idx}>
+                                <Typography variant="body2" color="text.secondary">
+                                  {p}
+                                </Typography>
+                              </li>
+                            ))}
                           </ul>
 
                           {/* Recommended module shortcuts (Overview panel) */}
@@ -1778,12 +1668,7 @@ function Shell({ onLogout }) {
                               const mapping = KPI_MODULE_ROUTES[r.key];
                               if (!mapping) return null;
                               return (
-                                <Button
-                                  key={r.key}
-                                  size="small"
-                                  variant="outlined"
-                                  onClick={() => navigate(mapping.path)}
-                                >
+                                <Button key={r.key} size="small" variant="outlined" onClick={() => navigate(mapping.path)}>
                                   {mapping.label}
                                 </Button>
                               );
@@ -1807,10 +1692,7 @@ function Shell({ onLogout }) {
                 <Route path="/" element={Overview} />
 
                 {/* SALES */}
-                <Route
-                  path="/sales"
-                  element={<Navigate to="/sales/quotations" replace />}
-                />
+                <Route path="/sales" element={<Navigate to="/sales/quotations" replace />} />
                 <Route
                   path="/sales/invoices"
                   element={
@@ -1846,24 +1728,14 @@ function Shell({ onLogout }) {
                       path={`/sales/${s.key}`}
                       element={
                         <Paper sx={{ p: 3, borderRadius: 3 }}>
-                          <Typography variant="h6">
-                            Sales — {s.label}
-                          </Typography>
+                          <Typography variant="h6">Sales — {s.label}</Typography>
                         </Paper>
                       }
                     />
                   ))}
 
                 {/* PURCHASING */}
-                <Route
-                  path="/purchasing"
-                  element={
-                    <Navigate
-                      to="/purchasing/supplier-invoices"
-                      replace
-                    />
-                  }
-                />
+                <Route path="/purchasing" element={<Navigate to="/purchasing/supplier-invoices" replace />} />
                 <Route
                   path="/purchasing/supplier-invoices"
                   element={
@@ -1907,19 +1779,14 @@ function Shell({ onLogout }) {
                       path={`/purchasing/${s.key}`}
                       element={
                         <Paper sx={{ p: 3, borderRadius: 3 }}>
-                          <Typography variant="h6">
-                            Purchasing — {s.label}
-                          </Typography>
+                          <Typography variant="h6">Purchasing — {s.label}</Typography>
                         </Paper>
                       }
                     />
                   ))}
 
                 {/* 🌟 INVENTORY */}
-                <Route
-                  path="/inventory"
-                  element={<Navigate to="/inventory/items" replace />}
-                />
+                <Route path="/inventory" element={<Navigate to="/inventory/items" replace />} />
                 <Route
                   path="/inventory/items"
                   element={
@@ -1936,25 +1803,12 @@ function Shell({ onLogout }) {
                     />
                   }
                 />
-                <Route
-                  path="/inventory/stock-moves"
-                  element={<InventoryStockMove />}
-                />
-                <Route
-                  path="/inventory/adjustments"
-                  element={<InventoryAdjustments />}
-                />
-                {/* ✅ New dedicated Warehouses page */}
-                <Route path="/inventory/warehouses" 
-                  element={<InventoryWarehouses />} />
+                <Route path="/inventory/stock-moves" element={<InventoryStockMove />} />
+                <Route path="/inventory/adjustments" element={<InventoryAdjustments />} />
+                <Route path="/inventory/warehouses" element={<InventoryWarehouses />} />
 
                 {/* FINANCE */}
-                <Route
-                  path="/finance"
-                  element={
-                    <Navigate to="/finance/finance-docs" replace />
-                  }
-                />
+                <Route path="/finance" element={<Navigate to="/finance/finance-docs" replace />} />
                 <Route
                   path="/finance/journal"
                   element={
@@ -1967,73 +1821,38 @@ function Shell({ onLogout }) {
                       onApprove={onApproveJE}
                       onPost={onPostJE}
                       onView={(id, e) => console.log("view JE", id, e)}
-                      onExportCSV={(
-                        list,
-                        name = "journal_entries.csv"
-                      ) => {
-                        const header = [
-                          "Date",
-                          "JE No.",
-                          "Ref No.",
-                          "Memo",
-                          "Status",
-                          "Debit (kr)",
-                          "Credit (kr)",
-                        ];
-                        const rows = (list ?? journalEntries).map(
-                          (je) => {
-                            const debit = Array.isArray(je.lines)
-                              ? je.lines.reduce(
-                                  (s, l) =>
-                                    s + (Number(l.debit) || 0),
-                                  0
-                                )
-                              : 0;
-                            const credit = Array.isArray(je.lines)
-                              ? je.lines.reduce(
-                                  (s, l) =>
-                                    s + (Number(l.credit) || 0),
-                                  0
-                                )
-                              : 0;
-                            return {
-                              date: je.date,
-                              jeNumber: je.jeNumber,
-                              reference: je.reference,
-                              memo: je.memo,
-                              status: je.status,
-                              debit,
-                              credit,
-                            };
-                          }
-                        );
+                      onExportCSV={(list, name = "journal_entries.csv") => {
+                        const header = ["Date", "JE No.", "Ref No.", "Memo", "Status", "Debit (kr)", "Credit (kr)"];
+                        const rows = (list ?? journalEntries).map((je) => {
+                          const debit = Array.isArray(je.lines)
+                            ? je.lines.reduce((s, l) => s + (Number(l.debit) || 0), 0)
+                            : 0;
+                          const credit = Array.isArray(je.lines)
+                            ? je.lines.reduce((s, l) => s + (Number(l.credit) || 0), 0)
+                            : 0;
+                          return {
+                            date: je.date,
+                            jeNumber: je.jeNumber,
+                            reference: je.reference,
+                            memo: je.memo,
+                            status: je.status,
+                            debit,
+                            credit,
+                          };
+                        });
                         const lines = rows.map((r) =>
                           [
                             String(r.date || "").slice(0, 10),
-                            `"${(r.jeNumber || "").replace(
-                              /"/g,
-                              '""'
-                            )}"`,
-                            `"${(r.reference || "").replace(
-                              /"/g,
-                              '""'
-                            )}"`,
+                            `"${(r.jeNumber || "").replace(/"/g, '""')}"`,
+                            `"${(r.reference || "").replace(/"/g, '""')}"`,
                             `"${(r.memo || "").replace(/"/g, '""')}"`,
                             r.status || "draft",
-                            (r.debit || 0)
-                              .toFixed(2)
-                              .replace(".", ","),
-                            (r.credit || 0)
-                              .toFixed(2)
-                              .replace(".", ","),
+                            (r.debit || 0).toFixed(2).replace(".", ","),
+                            (r.credit || 0).toFixed(2).replace(".", ","),
                           ].join(",")
                         );
-                        const csv = [header.join(","), ...lines].join(
-                          "\n"
-                        );
-                        const blob = new Blob([csv], {
-                          type: "text/csv;charset=utf-8",
-                        });
+                        const csv = [header.join(","), ...lines].join("\n");
+                        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement("a");
                         a.href = url;
@@ -2058,12 +1877,7 @@ function Shell({ onLogout }) {
                       }}
                       onUpdate={updGl}
                       onDelete={delGl}
-                      onExportCSV={(
-                        rowsOverride,
-                        name = "general_ledger.csv"
-                      ) =>
-                        exportGL(rowsOverride ?? glRows, name)
-                      }
+                      onExportCSV={(rowsOverride, name = "general_ledger.csv") => exportGL(rowsOverride ?? glRows, name)}
                       inventoryApi={{ createStockMove, postStockMove }}
                       invoiceResolvers={invoiceResolvers}
                     />
@@ -2071,40 +1885,20 @@ function Shell({ onLogout }) {
                 />
                 <Route
                   path="/finance/trial"
-                  element={
-                    <TrialBalance
-                      rows={glRows}
-                      accounts={accounts}
-                      onOpenAccount={() => {}}
-                    />
-                  }
+                  element={<TrialBalance rows={glRows} accounts={accounts} onOpenAccount={() => {}} />}
                 />
                 <Route
                   path="/finance/coa"
-                  element={
-                    <ChartOfAccounts
-                      accounts={accounts}
-                      refetch={refetchAccounts}
-                    />
-                  }
+                  element={<ChartOfAccounts accounts={accounts} refetch={refetchAccounts} />}
                 />
 
                 {/* REPORTS & BI */}
                 <Route path="/reports" element={<Reports />} />
-                <Route
-                  path="/reports/balance-sheet"
-                  element={
-                    <BalanceSheet rows={glRows} accounts={accounts} />
-                  }
-                />
+                <Route path="/reports/balance-sheet" element={<BalanceSheet rows={glRows} accounts={accounts} />} />
 
                 {/* ✅ ADMIN / SETTINGS */}
-                <Route
-                  path="/admin"
-                  element={<Navigate to="/admin/inbox" replace />}
-                />
+                <Route path="/admin" element={<Navigate to="/admin/inbox" replace />} />
                 <Route path="/admin/inbox" element={<BilagsInbox />} />
-                {/* 🌟 NEW: Admin Project Management route with API */}
                 <Route
                   path="/admin/projects"
                   element={
@@ -2127,31 +1921,17 @@ function Shell({ onLogout }) {
                       path={`/admin/${s.key}`}
                       element={
                         <Paper sx={{ p: 3, borderRadius: 3 }}>
-                          <Typography variant="h6">
-                            Admin — {s.label}
-                          </Typography>
+                          <Typography variant="h6">Admin — {s.label}</Typography>
                         </Paper>
                       }
                     />
                   ))}
 
                 {/* Backward-compat redirects */}
-                <Route
-                  path="/gl"
-                  element={<Navigate to="/finance/gl" replace />}
-                />
-                <Route
-                  path="/journal"
-                  element={<Navigate to="/finance/journal" replace />}
-                />
-                <Route
-                  path="/trial"
-                  element={<Navigate to="/finance/trial" replace />}
-                />
-                <Route
-                  path="/coa"
-                  element={<Navigate to="/finance/coa" replace />}
-                />
+                <Route path="/gl" element={<Navigate to="/finance/gl" replace />} />
+                <Route path="/journal" element={<Navigate to="/finance/journal" replace />} />
+                <Route path="/trial" element={<Navigate to="/finance/trial" replace />} />
+                <Route path="/coa" element={<Navigate to="/finance/coa" replace />} />
 
                 {/* 404 -> Overview */}
                 <Route path="*" element={<Navigate to="/" replace />} />
@@ -2165,7 +1945,7 @@ function Shell({ onLogout }) {
             onClose={() => setBhDialogOpen(false)}
             health={businessHealth}
             news={businessHealthNews}
-            onNavigate={(path) => navigate(path)}  // ✅ use router for page buttons
+            onNavigate={(path) => navigate(path)}
           />
         </Box>
       </Box>
@@ -2186,17 +1966,15 @@ function BusinessHealthDialog({ open, onClose, health, news, onNavigate }) {
     { label: "Data quality", score: h.dataQualityScore },
   ];
 
-  // 🔵 Blue fill in dialog KPI bars
   const KPIBarDialogRow = ({ label, score }) => {
-    const pct = Math.max(
-      0,
-      Math.min(100, Number.isFinite(score) ? score : 0)
-    );
+    const pct = Math.max(0, Math.min(100, Number.isFinite(score) ? score : 0));
     return (
       <Stack spacing={0.5}>
-        <Stack direction="row" justifyContent="space-between">
-          <Typography variant="body2">{label}</Typography>
-          <Typography variant="body2" color="text.secondary">
+        <Stack direction="row" justifyContent="space-between" sx={{ gap: 1 }}>
+          <Typography variant="body2" sx={{ minWidth: 0 }}>
+            {label}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ flex: "0 0 auto" }}>
             {pct.toFixed(0)}%
           </Typography>
         </Stack>
@@ -2204,10 +1982,7 @@ function BusinessHealthDialog({ open, onClose, health, news, onNavigate }) {
           sx={(t) => ({
             height: 10,
             borderRadius: 999,
-            bgcolor:
-              t.palette.mode === "dark"
-                ? "rgba(255,255,255,0.08)"
-                : "rgba(0,0,0,0.04)",
+            bgcolor: t.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)",
             overflow: "hidden",
           })}
         >
@@ -2216,7 +1991,7 @@ function BusinessHealthDialog({ open, onClose, health, news, onNavigate }) {
               height: "100%",
               width: `${pct}%`,
               borderRadius: 999,
-              bgcolor: t.palette.primary.main, // 🔵 blue fill
+              bgcolor: t.palette.primary.main,
             })}
           />
         </Box>
@@ -2225,26 +2000,28 @@ function BusinessHealthDialog({ open, onClose, health, news, onNavigate }) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="lg"
+      // ✅ friendlier on phones
+      PaperProps={{
+        sx: { borderRadius: { xs: 3, md: 4 } },
+      }}
+    >
       <DialogTitle>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ gap: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, minWidth: 0 }}>
             AI Business Health – Where to prioritise your work
           </Typography>
           {typeof h.overallScore === "number" && (
-            <Chip
-              size="small"
-              color="primary"
-              label={`Overall health: ${h.overallScore.toFixed(0)}%`}
-            />
+            <Chip size="small" color="primary" label={`Overall health: ${h.overallScore.toFixed(0)}%`} />
           )}
         </Stack>
       </DialogTitle>
-      <DialogContent dividers>
+
+      <DialogContent dividers sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 3 } }}>
         <Stack spacing={2}>
           {n.headline && (
             <Typography variant="body1" sx={{ fontWeight: 600 }}>
@@ -2261,19 +2038,13 @@ function BusinessHealthDialog({ open, onClose, health, news, onNavigate }) {
             <Grid item xs={12} md={7}>
               <Stack spacing={1.25}>
                 {rows.map((r) => (
-                  <KPIBarDialogRow
-                    key={r.label}
-                    label={r.label}
-                    score={r.score}
-                  />
+                  <KPIBarDialogRow key={r.label} label={r.label} score={r.score} />
                 ))}
               </Stack>
             </Grid>
+
             <Grid item xs={12} md={5}>
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, mb: 1 }}
-              >
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
                 Suggested priority sequence
               </Typography>
               <ol style={{ margin: 0, paddingLeft: "1.1rem" }}>
@@ -2305,11 +2076,8 @@ function BusinessHealthDialog({ open, onClose, health, news, onNavigate }) {
                       size="small"
                       variant="outlined"
                       onClick={() => {
-                        if (onNavigate) {
-                          onNavigate(mapping.path);  // ✅ SPA navigation
-                        } else {
-                          window.location.hash = `#${mapping.path}`;
-                        }
+                        if (onNavigate) onNavigate(mapping.path);
+                        else window.location.hash = `#${mapping.path}`;
                         onClose?.();
                       }}
                     >
@@ -2319,28 +2087,19 @@ function BusinessHealthDialog({ open, onClose, health, news, onNavigate }) {
                 })}
               </Box>
 
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ display: "block", mt: 0.5 }}
-              >
-                Tip: Start by assigning owners and deadlines to the top 1–2
-                priorities, then track progress monthly in the Reports module.
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                Tip: Start by assigning owners and deadlines to the top 1–2 priorities, then track progress monthly in
+                the Reports module.
               </Typography>
             </Grid>
           </Grid>
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button
-          variant="outlined"
-          onClick={() => {
-            onClose?.();
-          }}
-        >
+
+      <DialogActions sx={{ px: { xs: 2, md: 3 }, py: 1.5 }}>
+        <Button variant="outlined" onClick={() => onClose?.()}>
           Close
         </Button>
-        {/* ❌ "Go to Reports" button removed */}
       </DialogActions>
     </Dialog>
   );
