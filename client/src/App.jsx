@@ -1219,13 +1219,6 @@ function Shell({ onLogout }) {
             {DrawerContent}
           </Drawer>
         )}
-// PART 4/5 — Main content area + Overview + routes (centered canvas + flex shrink fixes)
-// Notes applied:
-// ✅ main: minWidth:0 + overflowX hidden so child grids/tables cannot break layout
-// ✅ centered canvas: maxWidth 1200 + responsive padding
-// ✅ fixed: removed flexWrap/minWidth mistakes in ModuleCard icon box
-// ✅ Grid spacing responsive and breakpoints aligned for mobile
-
         <Box
           component="main"
           sx={{
